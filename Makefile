@@ -12,3 +12,4 @@ pdf_with_output: md_with_output
 pdf2:
 	jupyter nbconvert Ejercicios\ de\ Series\ de\ Tiempo\ en\ R.ipynb --to pdf --TemplateExporter.exclude_code_cell=True
 
+build: pdf_with_output pdf

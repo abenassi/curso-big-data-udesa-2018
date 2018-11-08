@@ -46,7 +46,7 @@ a. Plotear la relación entre la inflación mensual y las expectativas de inflac
 
 b. ¿Tal vez las expectativas de inflación futura inciden con un mes de retraso en la inflación mensual real? Para esto hace falta comparar una regresión entre las dos variables, contra una en la que las expectativas están 1 mes adelantadas. Esto requiere tratar las variables como series de tiempo.
     
-    b1. install.packages("dynlm"); library("dynlm") (Instala y carga una librería de regresión para series de tiempo)
+    b1. install.packages("dynlm"); install.packages("Hmisc"); library(Hmisc); library("dynlm") (Instala y carga librerías de regresión para series de tiempo)
     b2. library(zoo); df_ts = read.zoo(df, index = 1, tz = "", format = "%Y-%m-%d") (Lee la primer columna como un índice de tiempo con "zoo")
     b3. Regresar la inflación mensual contra las expectativas de inflación futura. Hint: summary(dynlm(df_ts$* ~ df_ts$*))
     b3. Regresar la inflación mensual contra las expectativas de inflación futura desfasadas 1 mes antes. Hint: summary(dynlm(df_ts$* ~ lag(df_ts$*, -1))).
@@ -61,13 +61,17 @@ a. Cargar en un dataframe de series de tiempo la inflación mensual, la tasa de 
 b. Usar el método lasso (librería `glmnet`) para encontrar el mejor modelo posible entre estas variables.
 
     b1. install.packages("glmnet", repos = "http://cran.us.r-project.org"); library(glmnet)  (Instala y carga glmnet)
-    b2. Remover las filas que tengan algún valor nulo. Hint: * = *[complete.cases(*), ]
-    b3. Crear una matriz de predictores x (sin la variable a predecir). Hint: x = data.matrix(subset(*, select=c("*", "*", "*")))
-    b4. Correr lasso usando cross validation. Hint: cvfit = cv.glmnet(x, y)
-    b5. Encontrar los coeficientes del modelo que minimiza el error de predicción. Hint: coef(cvfit, s = "lambda.min")
+    b2. Convertir el dataframe a series de tiempo. Hint: df_ts2 = read.zoo(*, index = 1, tz = "", format = "%Y-%m-%d")
+    b3. Remover las filas que tengan algún valor nulo. Hint: * = *[complete.cases(*), ]
+    b4. Crear variables con lags de 1 mes para analizar efectos desplazados en el tiempo. Hint: df_ts2$* = Lag(df_ts2$*, 1)
+    b5. Crear una matriz de predictores x (sin la variable a predecir). Hint: x = data.matrix(subset(*, select=c("*", "*", "*")))
+    b6. Correr lasso usando cross validation. Hint: cvfit = cv.glmnet(x, y)
+    b7. Encontrar los coeficientes del modelo que minimiza el error de predicción. Hint: coef(cvfit)
 
-c. Comparar la predicción del modelo con la realidad en un plot. Hint: plot(y, predict(cvfit, newx = *, s = "lambda.min"))
+c. Comparar la predicción del modelo con la realidad en un plot. Hint: `y_predict = predict(cvfit, newx = *)` y `plot(y, *)`
 
-d. Calcular el R2 de un ajuste lineal tradicional sobre este modelo y comparar los coeficientes.
+d. Calcular la performance del modelo encontrado por lasso para predecir la inflación. Hint: Se puede regresar la inflación observada contra la predicción. `summary(lm(* ~ *))`
 
-Hint: `summary(lm(* ~ * + *))`
+e. Comparar los coeficientes del modelo encontrado por LASSO con los que surgirían de una regresión lineal común. Hint: `summary(lm(* ~ * + *))`
+
+f. El modelo de `gmlnet` devuelve 2 modelos: uno minimiza el error y otro es el más regularizado. Comparar los coeficientes y la performance (R2 de y vs. y predecido) de ambos modelos. Hint para usar el modelo de error mínimo: `coef(*, s = "lambda.min")` y `predict(*, newx = x, s = "lambda.min")`
