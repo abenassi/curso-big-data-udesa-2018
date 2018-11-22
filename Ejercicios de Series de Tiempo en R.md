@@ -40,11 +40,37 @@ c. Descargar el tipo de cambio mínimo, promedio y máximo mensual, usando la AP
 
 d. Descargar el IPC, la inflación mensual y la inflación inter-anual en un mismo dataframe, usando la API (sin programar para eso en R) sólo desde 2017 en adelante. Hint: `&ids=*:percent_change,*:percent_change_a_year_ago` / `&start_date=*`.
 
-### Convertir el dataframe en uno de series de tiempo
+### Buscar relaciones entre series de tiempo
 
-a. Plotear la relación entre la inflación mensual y las expectativas de inflación futura. Hint: `plot(df$*, df$*)` 
+Las series de tiempo tienen la característica distintiva de que todas están relacionadas con un índice de tiempo (son datos estructurados cronológicamente, con una frecuencia determinada). Esto nos permite agregar nuevas posibilidades en la búsqueda de relaciones entre variables.
 
-b. ¿Tal vez las expectativas de inflación futura inciden con un mes de retraso en la inflación mensual real? Para esto hace falta comparar una regresión entre las dos variables, contra una en la que las expectativas están 1 mes adelantadas. Esto requiere tratar las variables como series de tiempo.
+a. Crear un modelo que explique el IPC nivel general nacional en base a las expectativas de inflación futura desde el 2017 en adelante, y hacer un scatter plot con su recta de regresión.
+
+    a1. Descargar en un mismo dataframe ambas series. Hint: df = read.csv("https://apis.datos.gob.ar/series/api/series/?limit=1000&ids=*:percent_change,*&format=csv&start_date=2017")
+    a2. Generar el primer modelo de regresión con los primeros 22 valores de c/u. Hint: modelo0 = lm(df$*[1:22] ~ df$*[1:22])
+    a3. Scatter plot de las dos variables y agregar la recta de regresión. Hint: plot(df$*[1:22] ~ df$*[1:22]); abline(modelo0)
+
+b. Existe una correlación! Pero tal vez las expectativas de inflación futura inciden con uno o dos meses de retraso en la inflación mensual real? 
+
+Para esto hace falta comparar una regresión entre las dos variables, contra una en la que las expectativas están 1 o 2 meses *adelantadas*. Esto requiere tratar las variables como series de tiempo y aplicarles *lags*. Para comparar el rendimiento del mismo modelo con lags diferentes, vamos a hacer un gráfico partido en 4 para ver cómo se comporta cada uno.
+
+    b1. Generar 3 modelos: uno sin lags, uno con 1 mes de lag y otro con 2 meses de lag. Hint: modelo0 = lm(df$*[1:22] ~ df$*[1:22]); modelo1 = lm(df$*[2:22] ~ df$*[1:21]); modelo2 = lm(df$*[3:22] ~ df$*[1:20]); 
+    b1. Partir la pantalla en 4. Hint: par(mfrow=c(*,*))
+    b2. Graficar nuevamente el scatter plot con la recta de regresión (como en el punto anterior) para los 3 modelos. Hint: plot(*, *); abline(*)
+    b3. Agregar un gráfico comparando los R2 de cada modelo contra la cantidad de *lags* aplicados. Hint:
+    
+        info0=summary(modelo0)
+        info1=summary(modelo1)
+        info2=summary(modelo2)
+
+        ajuste=c(info0$r.squared,info1$r.squared,info2$r.squared)
+
+        plot(c(0,1,2),ajuste,xlab="Lag",ylab="Bondad del ajuste [R2]",pch=16)
+        
+    b4. Corroborar, de todas formas, que ninguno de los 3 modelos es muy bueno porque hay estructura en sus residuos.... Necesitaremos más variables explicativas?
+
+
+Bonus track! Existen dos librerías que facilitan el uso de *lags* en regresiones con series de tiempo llamada `dynlm` y `Hmisc`. Requiere que el dataframe se reconozca como un dataframe *de series de tiempo, con un índice de tiempo* y permite aplicar lags con una función más fácilmente...
     
     b1. install.packages("dynlm"); install.packages("Hmisc"); library(Hmisc); library("dynlm") (Instala y carga librerías de regresión para series de tiempo)
     b2. library(zoo); df_ts = read.zoo(df, index = 1, tz = "", format = "%Y-%m-%d") (Lee la primer columna como un índice de tiempo con "zoo")
@@ -54,7 +80,7 @@ b. ¿Tal vez las expectativas de inflación futura inciden con un mes de retraso
 
 # LASSO
 
-Sin embargo, la inflación es un fenómeno multicausal. Probablemente el mejor modelo explicativo sea uno que incluya muchas variables... La base de series de tiempo ofrece 20 mil! Si bien no tiene sentido probar con todas, habría que buscar un método que elija el mejor modelo al enfrentarse a muchas variables. (Ver tutorial de LASSO en R para más detalles: https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html )
+Como dijimos tal vez nos falten variables explicativas, la inflación es un fenómeno multicausal. Probablemente el mejor modelo explicativo sea uno que incluya muchas variables... La base de series de tiempo ofrece 20 mil! Si bien no tiene sentido probar con todas, habría que buscar un método que elija el mejor modelo al enfrentarse a muchas variables. (Ver tutorial de LASSO en R para más detalles: https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html )
 
 a. Cargar en un dataframe de series de tiempo la inflación mensual, la tasa de interés, la variación mensual del tipo de cambio nominal, las expectativas de inflación futura y el tipo de cambio real multilateral, desde 2017. Hint: `df2 = read.csv("https://apis.datos.gob.ar/series/api/series/?limit=1000&ids=*:percent_change,*,*:percent_change,*,*&format=csv&start_date=2017")` 
 
@@ -69,9 +95,3 @@ b. Usar el método lasso (librería `glmnet`) para encontrar el mejor modelo pos
     b7. Encontrar los coeficientes del modelo que minimiza el error de predicción. Hint: coef(cvfit)
 
 c. Comparar la predicción del modelo con la realidad en un plot. Hint: `y_predict = predict(cvfit, newx = *)` y `plot(y, *)`
-
-d. Calcular la performance del modelo encontrado por lasso para predecir la inflación. Hint: Se puede regresar la inflación observada contra la predicción. `summary(lm(* ~ *))`
-
-e. Comparar los coeficientes del modelo encontrado por LASSO con los que surgirían de una regresión lineal común. Hint: `summary(lm(* ~ * + *))`
-
-f. El modelo de `gmlnet` devuelve 2 modelos: uno minimiza el error y otro es el más regularizado. Comparar los coeficientes y la performance (R2 de y vs. y predecido) de ambos modelos. Hint para usar el modelo de error mínimo: `coef(*, s = "lambda.min")` y `predict(*, newx = x, s = "lambda.min")`
